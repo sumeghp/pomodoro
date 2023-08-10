@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import time
+import csv
 
 class PomodoroApp:
     def __init__(self, root):
@@ -11,26 +12,53 @@ class PomodoroApp:
         self.is_break = False
         self.time_remaining = self.work_time
         self.running = False
-        self.timer_label = tk.Label(root, text="25:00", font=("Helvetica", 48))
-        self.start_button = tk.Button(root, text="Start", command=self.start_timer)
-        self.stop_button = tk.Button(root, text="Stop", command=self.stop_timer)
+
+        self.comment_entry = tk.Entry(root)
+        self.display_panel = tk.Label(root, text="25:00", font=("Helvetica", 48))
+        self.start_stop = tk.Button(root, text="Start", command=self.start_stop_timer)
+        self.pause_resume = tk.Button(root, text="Pause", command=self.pause_resume_timer)
         
-        self.timer_label.pack(pady=20)
-        self.start_button.pack()
-        self.stop_button.pack()
+        self.comment_entry.pack(pady=10)
+        self.display_panel.pack(pady=20)
+        self.start_stop.pack()
+        self.pause_resume.pack()
+
+        self.log_file = open("pomodoro_log.csv", "a", newline="")
+        self.log_writer = csv.writer(self.log_file)
         
-    def start_timer(self):
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)  # Capture the window close event
+    
+    def on_closing(self):
+        self.log_file.close()
+        self.root.destroy()
+    
+    def start_stop_timer(self):
+        action = "Start" if not self.running else "Stop"
+        self.log_action(action)
+        
         if not self.running:
             self.running = True
+            self.start_stop.config(text="Stop")
             self.update_timer()
+        else:
+            self.running = False
+            self.start_stop.config(text="Start")
     
-    def stop_timer(self):
+    def pause_resume_timer(self):
+        action = "Pause" if self.running else "Resume"
+        self.log_action(action)
+        
         if self.running:
             self.running = False
+            self.pause_resume.config(text="Resume")
+        else:
+            self.running = True
+            self.pause_resume.config(text="Pause")
+            self.update_timer()
     
     def update_timer(self):
         if self.running:
-            self.timer_label.config(text=self.format_time(self.time_remaining))
+            self.display_panel.config(text=self.format_time(self.time_remaining))
             self.time_remaining -= 1
             if self.time_remaining < 0:
                 self.toggle_break()
@@ -51,6 +79,10 @@ class PomodoroApp:
         minutes = seconds // 60
         seconds %= 60
         return f"{minutes:02d}:{seconds:02d}"
+
+    def log_action(self, action):
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        self.log_writer.writerow([timestamp, f"Action: {action}"])
 
 if __name__ == "__main__":
     root = tk.Tk()
